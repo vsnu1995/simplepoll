@@ -1,0 +1,23 @@
+{
+  "name": "SimplePollApp",
+  "version": "1.0.0",
+  "description": "A react and hapi based polling application",
+  "main": "index.js",
+  "author": "Vishnu Sathyanathan",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "build": "tsc --project ./",
+    "start": "yarn build && node build/server.js"
+  },
+  "devDependencies": {
+    "@types/hapi__hapi": "^20.0.3",
+    "@types/node": "^14.14.14",
+    "ts-node": "^9.1.1",
+    "typescript": "^4.1.3"
+  },
+  "dependencies": {
+    "@hapi/hapi": "^20.0.3",
+    "mongoose": "^5.11.8"
+  }
+}
