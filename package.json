@@ -1,5 +1,5 @@
 {
-  "name": "SimplePollApp",
+  "name": "simplepollapp",
   "version": "1.0.0",
   "description": "A react and hapi based polling application",
   "main": "index.js",
