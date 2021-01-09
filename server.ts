@@ -2,7 +2,8 @@ import Hapi from '@hapi/hapi';
 import mongoose from 'mongoose';
 require('./db');
 import User from './schemas/user';
-import Poll from './schemas/poll';
+import Poll, { PollDocument } from './schemas/poll';
+import Response, { ResponseDocument } from './schemas/response';
 
 const init = async () => {
   const server: Hapi.Server = new Hapi.Server({
@@ -45,6 +46,47 @@ const init = async () => {
         data: {
           polls: [],
           userId: user._id,
+        },
+      };
+    },
+  });
+
+  server.route({
+    method: 'GET',
+    path: '/polls/{id}',
+    handler: async (request: Hapi.Request) => {
+      const pollId = request.params.id;
+      const userId = request.headers['user-id'];
+
+      let poll: PollDocument | null = null;
+
+      if (pollId && mongoose.isValidObjectId(pollId)) {
+        poll = await Poll.findById(pollId).exec();
+      }
+
+      if (!poll) {
+        return {
+          status: 'failed',
+          data: {
+            poll,
+          },
+        };
+      }
+
+      let userResponse: ResponseDocument | null = null;
+
+      if (userId && mongoose.isValidObjectId(userId)) {
+        userResponse = await Response.findOne({
+          pollId,
+          userId,
+        }).exec();
+      }
+
+      return {
+        status: 'success',
+        data: {
+          poll,
+          userResponse,
         },
       };
     },
