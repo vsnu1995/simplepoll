@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-const Poll = new Schema(
+const PollSchema = new Schema(
   {
     question: String,
     options: [String],
@@ -11,7 +11,7 @@ const Poll = new Schema(
   { timestamps: true },
 );
 
-export interface Poll {
+export interface IPoll {
   question: string;
   options: [string];
   multiSelect: boolean;
@@ -21,8 +21,18 @@ export interface Poll {
   updatedAt: Date;
 }
 
-export interface PollDocument extends Poll, Document {}
+export interface IPollPayload {
+  question: string;
+  options: [string];
+  multiSelect: boolean;
+  optionsAddable: boolean;
+}
 
-export interface PollModel extends Model<PollDocument> {}
+export interface IPollDocument extends IPoll, Document {}
 
-export default mongoose.model<PollDocument, PollModel>('Poll', Poll);
+export interface IPollModel extends Model<IPollDocument> {}
+
+export default mongoose.model<IPollDocument, IPollModel>(
+  'Poll',
+  PollSchema,
+);

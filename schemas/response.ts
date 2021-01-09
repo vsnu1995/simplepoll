@@ -1,29 +1,29 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-const Response = new Schema(
+const ResponseSchema = new Schema(
   {
     pollId: mongoose.Types.ObjectId,
-    responsIndexes: [Number],
+    responseIndexes: [Number],
     userId: mongoose.Types.ObjectId,
   },
   { timestamps: true },
 );
 
-Response.index({ pollId: 1, userId: 1 }, { unique: true });
+ResponseSchema.index({ pollId: 1, userId: 1 }, { unique: true });
 
-export interface Response {
+export interface IResponse {
   pollId: mongoose.Types.ObjectId;
-  responsIndexes: [number];
+  responseIndexes: [number];
   userId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ResponseDocument extends Response, Document {}
+export interface IResponseDocument extends IResponse, Document {}
 
-export interface ResponseModel extends Model<ResponseDocument> {}
+export interface IResponseModel extends Model<IResponseDocument> {}
 
-export default mongoose.model<ResponseDocument, ResponseModel>(
+export default mongoose.model<IResponseDocument, IResponseModel>(
   'Response',
-  Response,
+  ResponseSchema,
 );

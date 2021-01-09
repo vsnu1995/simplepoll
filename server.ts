@@ -1,9 +1,10 @@
 import Hapi from '@hapi/hapi';
 import mongoose from 'mongoose';
+import Joi from 'joi';
 require('./db');
-import User from './schemas/user';
-import Poll, { PollDocument } from './schemas/poll';
-import Response, { ResponseDocument } from './schemas/response';
+import User, { returnUser } from './schemas/user';
+import Poll, { IPollDocument, IPollPayload } from './schemas/poll';
+import Response, { IResponseDocument } from './schemas/response';
 
 const init = async () => {
   const server: Hapi.Server = new Hapi.Server({
@@ -11,41 +12,21 @@ const init = async () => {
     host: 'localhost',
   });
 
+  server.validator(require('joi'));
+
   server.route({
     method: 'GET',
     path: '/polls',
     handler: async (request: Hapi.Request) => {
-      const userId = request.headers['user-id'];
+      const user = await returnUser(request);
 
-      if (userId && mongoose.isValidObjectId(userId)) {
-        const user = await User.findById(userId).exec();
-
-        if (
-          user &&
-          user.userAgent === request.headers['user-agent']
-        ) {
-          const polls = await Poll.find({ creatorId: userId }).exec();
-
-          return {
-            status: 'success',
-            data: {
-              polls,
-              userId: user._id,
-            },
-          };
-        }
-      }
-
-      const user = await User.create({
-        userAgent: request.headers['user-agent'],
-        ipAddress: request.info.remoteAddress,
-      });
+      const polls = await Poll.find({ creatorId: user?._id }).exec();
 
       return {
         status: 'success',
         data: {
-          polls: [],
-          userId: user._id,
+          polls: polls,
+          user,
         },
       };
     },
@@ -56,9 +37,8 @@ const init = async () => {
     path: '/polls/{id}',
     handler: async (request: Hapi.Request) => {
       const pollId = request.params.id;
-      const userId = request.headers['user-id'];
 
-      let poll: PollDocument | null = null;
+      let poll: IPollDocument | null = null;
 
       if (pollId && mongoose.isValidObjectId(pollId)) {
         poll = await Poll.findById(pollId).exec();
@@ -73,20 +53,55 @@ const init = async () => {
         };
       }
 
-      let userResponse: ResponseDocument | null = null;
-
-      if (userId && mongoose.isValidObjectId(userId)) {
-        userResponse = await Response.findOne({
-          pollId,
-          userId,
-        }).exec();
-      }
+      const user = await returnUser(request);
+      const userResponse = await Response.findOne({
+        pollId,
+        userId: user._id,
+      }).exec();
 
       return {
         status: 'success',
         data: {
           poll,
           userResponse,
+          user,
+        },
+      };
+    },
+  });
+
+  server.route({
+    method: 'POST',
+    path: '/responses/{pollId}',
+    options: {
+      validate: {
+        payload: {
+          responseIndexes: Joi.array().items(Joi.number()),
+        },
+      },
+    },
+    handler: async (request: Hapi.Request) => {
+      const pollId = request.params.pollId;
+
+      let poll: IPollDocument | null = null;
+
+      if (pollId && mongoose.isValidObjectId(pollId)) {
+        poll = await Poll.findById(pollId).exec();
+      }
+
+      const user = await returnUser(request);
+
+      const userResponse = await Response.findOne({
+        pollId,
+        userId: user._id,
+      }).exec();
+
+      return {
+        status: 'success',
+        data: {
+          poll,
+          userResponse,
+          user,
         },
       };
     },
@@ -95,38 +110,36 @@ const init = async () => {
   server.route({
     method: 'POST',
     path: '/polls/create',
+    options: {
+      validate: {
+        payload: {
+          question: Joi.string().min(1).max(2048),
+          options: Joi.array().items(Joi.string().min(1).max(2048)),
+          multiSelect: Joi.boolean(),
+          optionsAddable: Joi.boolean(),
+        },
+      },
+    },
     handler: async (request: Hapi.Request) => {
-      const userId = request.headers['user-agent'];
+      const pollObj = <IPollPayload>request.payload;
 
-      if (userId && mongoose.isValidObjectId(userId)) {
-        const user = await User.findById(userId).exec();
+      const user = await returnUser(request);
 
-        if (
-          user &&
-          user.userAgent === request.headers['user-agent']
-        ) {
-          const polls = await Poll.find({ creatorId: userId }).exec();
-
-          return {
-            status: 'success',
-            data: {
-              polls,
-              userId: user._id,
-            },
-          };
-        }
-      }
-
-      const user = await User.create({
-        userAgent: request.headers['user-agent'],
-        ipAddress: request.info.remoteAddress,
+      const poll = new Poll({
+        question: pollObj.question,
+        options: pollObj.options,
+        multiSelect: pollObj.multiSelect,
+        optionsAddable: pollObj.optionsAddable,
+        creatorId: user._id,
       });
+
+      await poll.save();
 
       return {
         status: 'success',
         data: {
-          polls: [],
-          userId: user._id,
+          poll: poll,
+          user: user,
         },
       };
     },

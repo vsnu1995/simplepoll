@@ -1,17 +1,43 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
+import Hapi from '@hapi/hapi';
 
-const User = new Schema({
+const UserSchema = new Schema({
   userAgent: String,
   ipAddress: String,
 });
 
-export interface User {
+export interface IUser {
   userAgent: string;
   ipAddress: string;
 }
 
-export interface UserDocument extends User, Document {}
+export interface IUserDocument extends IUser, Document {}
 
-export interface UserModel extends Model<UserDocument> {}
+export interface IUserModel extends Model<IUserDocument> {}
 
-export default mongoose.model<UserDocument, UserModel>('User', User);
+const User = mongoose.model<IUserDocument, IUserModel>(
+  'User',
+  UserSchema,
+);
+export default User;
+
+export async function returnUser(
+  request: Hapi.Request,
+): Promise<IUserDocument> {
+  const userId = request.headers['user-id'];
+
+  if (userId && mongoose.isValidObjectId(userId)) {
+    const user = await User.findById(userId).exec();
+
+    if (user && user.userAgent === request.headers['user-agent']) {
+      return user;
+    }
+  }
+
+  const user = await User.create({
+    userAgent: request.headers['user-agent'],
+    ipAddress: request.info.remoteAddress,
+  });
+
+  return user;
+}
